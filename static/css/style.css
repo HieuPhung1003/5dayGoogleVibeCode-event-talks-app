@@ -689,6 +689,12 @@ body {
 }
 
 /* Action button inside card */
+.update-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .tweet-action-btn {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -710,6 +716,12 @@ body {
     color: #000000;
     border-color: var(--color-twitter);
     transform: scale(1.03);
+}
+
+.tweet-action-btn.copy-btn:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #070a13;
 }
 
 .tweet-action-btn svg {

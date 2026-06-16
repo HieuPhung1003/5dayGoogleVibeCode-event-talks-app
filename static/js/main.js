@@ -35,6 +35,7 @@ const elements = {
     resetFiltersBtn: document.getElementById('reset-filters-btn'),
     sortDescBtn: document.getElementById('sort-desc'),
     sortAscBtn: document.getElementById('sort-asc'),
+    exportCsvBtn: document.getElementById('export-csv-btn'),
     statTotalDays: document.getElementById('stat-total-days'),
     statTotalUpdates: document.getElementById('stat-total-updates'),
     lastCheckTimestamp: document.getElementById('last-check-timestamp'),
@@ -98,6 +99,11 @@ function setupEventListeners() {
     elements.sortAscBtn.addEventListener('click', () => {
         setSortOrder('asc');
     });
+
+    // Export CSV button
+    if (elements.exportCsvBtn) {
+        elements.exportCsvBtn.addEventListener('click', exportToCSV);
+    }
 
     // Modal Close handlers
     elements.closeModalBtn.addEventListener('click', closeTweetModal);
@@ -399,21 +405,40 @@ function renderFeedList(totalUpdatesCount) {
             updateItem.style.setProperty('--type-glow', `rgba(${styleMeta.rgb}, 0.12)`);
             updateItem.style.setProperty('--type-rgb', styleMeta.rgb);
             
-            // Header for update (Badge & Share Button)
+            // Header for update (Badge & Action Buttons)
             const badgeWrapper = document.createElement('div');
             badgeWrapper.className = 'update-badge-wrapper';
             badgeWrapper.innerHTML = `
                 <span class="badge category-badge">${update.type}</span>
-                <button class="tweet-action-btn" title="Tweet about this update">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
-                    </svg>
-                    <span>Tweet</span>
-                </button>
+                <div class="update-actions">
+                    <button class="tweet-action-btn copy-btn" title="Copy update text to clipboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
+                    <button class="tweet-action-btn tweet-btn" title="Tweet about this update">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="icon">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                        </svg>
+                        <span>Tweet</span>
+                    </button>
+                </div>
             `;
             
+            // Attach copy click event
+            badgeWrapper.querySelector('.copy-btn').addEventListener('click', () => {
+                navigator.clipboard.writeText(update.text).then(() => {
+                    showToast('Copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Copy failed:', err);
+                    showToast('Failed to copy to clipboard', 'error');
+                });
+            });
+            
             // Attach tweet composer click event
-            badgeWrapper.querySelector('.tweet-action-btn').addEventListener('click', () => {
+            badgeWrapper.querySelector('.tweet-btn').addEventListener('click', () => {
                 openTweetModal(update);
             });
             
@@ -574,4 +599,48 @@ function showToast(message, type = 'info') {
             toast.remove();
         }, 300);
     }, 3500);
+}
+
+// EXPORT TO CSV
+function exportToCSV() {
+    if (!appState.filteredNotes || appState.filteredNotes.length === 0) {
+        showToast('No updates found to export', 'error');
+        return;
+    }
+    
+    // Headers setup
+    const headers = ['Date', 'Type', 'Content Text', 'Source Link'];
+    const csvRows = [headers.join(',')];
+    
+    appState.filteredNotes.forEach(day => {
+        day.updates.forEach(update => {
+            // Escape double quotes inside values for CSV conformity
+            const escapeCSV = (val) => `"${val.replace(/"/g, '""')}"`;
+            
+            const date = escapeCSV(day.date);
+            const type = escapeCSV(update.type);
+            const text = escapeCSV(update.text);
+            const link = escapeCSV(update.link);
+            
+            csvRows.push([date, type, text, link].join(','));
+        });
+    });
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create temporary download element
+    const downloadLink = document.createElement('a');
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    downloadLink.setAttribute('href', url);
+    downloadLink.setAttribute('download', `bigquery_release_notes_${timestamp}.csv`);
+    downloadLink.style.visibility = 'hidden';
+    
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
+    showToast('Exported CSV successfully!', 'success');
 }
