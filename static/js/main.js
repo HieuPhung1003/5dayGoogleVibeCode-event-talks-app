@@ -36,6 +36,7 @@ const elements = {
     sortDescBtn: document.getElementById('sort-desc'),
     sortAscBtn: document.getElementById('sort-asc'),
     exportCsvBtn: document.getElementById('export-csv-btn'),
+    themeToggleBtn: document.getElementById('theme-toggle-btn'),
     statTotalDays: document.getElementById('stat-total-days'),
     statTotalUpdates: document.getElementById('stat-total-updates'),
     lastCheckTimestamp: document.getElementById('last-check-timestamp'),
@@ -62,6 +63,10 @@ const elements = {
 
 // INITIALIZATION
 document.addEventListener('DOMContentLoaded', () => {
+    // Load theme first to avoid flash of dark/light theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme);
+    
     setupEventListeners();
     fetchReleaseNotes(false);
 });
@@ -103,6 +108,11 @@ function setupEventListeners() {
     // Export CSV button
     if (elements.exportCsvBtn) {
         elements.exportCsvBtn.addEventListener('click', exportToCSV);
+    }
+
+    // Theme toggle button
+    if (elements.themeToggleBtn) {
+        elements.themeToggleBtn.addEventListener('click', toggleTheme);
     }
 
     // Modal Close handlers
@@ -643,4 +653,34 @@ function exportToCSV() {
     document.body.removeChild(downloadLink);
     
     showToast('Exported CSV successfully!', 'success');
+}
+
+// THEME SYSTEM
+function applyTheme(theme) {
+    const isLight = theme === 'light';
+    document.body.classList.toggle('light-theme', isLight);
+    
+    if (elements.themeToggleBtn) {
+        const sunIcon = elements.themeToggleBtn.querySelector('.sun-icon');
+        const moonIcon = elements.themeToggleBtn.querySelector('.moon-icon');
+        
+        if (isLight) {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+            elements.themeToggleBtn.title = 'Switch to Dark Theme';
+        } else {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+            elements.themeToggleBtn.title = 'Switch to Light Theme';
+        }
+    }
+    
+    localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+    showToast(`Switched to ${newTheme} mode`, 'info');
 }
